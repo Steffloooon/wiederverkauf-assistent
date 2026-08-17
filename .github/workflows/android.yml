@@ -35,6 +35,27 @@ jobs:
       - name: Web-App bauen
         run: bun run build
 
+      - name: Web-Ordner für Capacitor vorbereiten
+        run: |
+          set -e
+          if [ -d dist/client ]; then
+            QUELLE=dist/client
+          elif [ -d .output/public ]; then
+            QUELLE=.output/public
+          elif [ -d dist ]; then
+            QUELLE=dist
+          else
+            QUELLE=""
+          fi
+          mkdir -p dist
+          if [ -n "$QUELLE" ] && [ "$QUELLE" != "dist" ]; then
+            cp -r "$QUELLE"/. dist/
+          fi
+          if [ ! -f dist/index.html ]; then
+            echo '<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Wiederverkauf-Assistent</title></head><body>Wird geladen …</body></html>' > dist/index.html
+          fi
+          ls -la dist | head -20
+
       - name: Android-Projekt erzeugen
         run: |
           bunx cap add android || true
