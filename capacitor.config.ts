@@ -10,7 +10,9 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "de.wiederverkauf.assistent",
   appName: "Wiederverkauf-Assistent",
-  webDir: "dist/client",
+  // Die App laedt die veroeffentlichte Web-App (server.url). "dist" dient nur
+  // als Platzhalter-Ordner, den der Bauauftrag vor dem Sync anlegt.
+  webDir: "dist",
   server: {
     // Die App laedt immer die aktuelle Web-App – Aenderungen sind ohne
     // Neuinstallation sofort im Handy sichtbar.
