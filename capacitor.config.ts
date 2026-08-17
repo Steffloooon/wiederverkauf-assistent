@@ -16,7 +16,7 @@ const config: CapacitorConfig = {
   server: {
     // Die App laedt immer die aktuelle Web-App – Aenderungen sind ohne
     // Neuinstallation sofort im Handy sichtbar.
-    url: "https://project--16ced49b-8659-43c6-8685-72a242f17317.lovable.app",
+    url: "https://stefflon.lovable.app",
     cleartext: false,
   },
   android: {

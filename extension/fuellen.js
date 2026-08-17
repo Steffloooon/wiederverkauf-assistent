@@ -16,7 +16,6 @@
   // Merkmal, an dem die App erkennt, dass der Assistent auf dieser Seite läuft.
   document.documentElement.setAttribute("data-listing-assistent", "1");
 
-
   var TEXT = {
     laden: "Anzeigendaten werden geholt …",
     fuellen: "Formular wird ausgefüllt …",
@@ -24,23 +23,53 @@
     fertig: "Fertig. Bitte prüfen und selbst auf „Angebot einstellen“ klicken.",
     nichts: "Kein Formular gefunden. Öffne zuerst das Verkaufsformular der Plattform.",
     fehler: "Die Anzeigendaten konnten nicht geholt werden.",
-    abgelaufen: "Die Übergabe ist abgelaufen. Bitte in der App erneut auf „Veröffentlichen“ tippen.",
+    zugriff:
+      "Der Server hat den Zugriff verweigert. Bitte aktualisiere die App und versuche es erneut.",
+    server:
+      "Der Server ist gerade nicht erreichbar. Bitte prüfe deine Internetverbindung und versuche es erneut.",
+    abgelaufen:
+      "Die Übergabe ist abgelaufen. Bitte in der App erneut auf „Veröffentlichen“ tippen.",
   };
+
+  var SPEICHER_SCHLUESSEL = "wiederverkauf-assistent-uebergabe";
+
+  function speichern(p) {
+    try {
+      sessionStorage.setItem(SPEICHER_SCHLUESSEL, JSON.stringify(p));
+    } catch (e) {
+      /* Der Assistent funktioniert auch ohne Sitzungsspeicher. */
+    }
+  }
+
+  function gespeicherteParameter() {
+    try {
+      var wert = JSON.parse(sessionStorage.getItem(SPEICHER_SCHLUESSEL) || "null");
+      if (wert && wert.token && wert.api) {
+        return { token: String(wert.token), api: String(wert.api).replace(/\/$/, "") };
+      }
+    } catch (e) {
+      /* Ungültigen oder gesperrten Sitzungsspeicher ignorieren. */
+    }
+    return null;
+  }
 
   function parameter() {
     // Die Android-App setzt die Angaben direkt, weil sie das Skript selbst einspielt.
     var direkt = window.__laUebergabe;
     if (direkt && direkt.token && direkt.api) {
-      return { token: direkt.token, api: String(direkt.api).replace(/\/$/, "") };
+      var direkteParameter = { token: direkt.token, api: String(direkt.api).replace(/\/$/, "") };
+      speichern(direkteParameter);
+      return direkteParameter;
     }
     var quelle = window.location.hash.slice(1) || window.location.search.slice(1);
     var p = new URLSearchParams(quelle);
     var token = p.get("la-token");
     var api = p.get("la-api");
-    if (!token || !api) return null;
-    return { token: token, api: api.replace(/\/$/, "") };
+    if (!token || !api) return gespeicherteParameter();
+    var urlParameter = { token: token, api: api.replace(/\/$/, "") };
+    speichern(urlParameter);
+    return urlParameter;
   }
-
 
   var box = null;
   function melden(text, art) {
@@ -144,6 +173,13 @@
     return { gesetzt: gesetzt, offen: offen };
   }
 
+  function formularGefunden(felder, bildEingabe) {
+    for (var i = 0; i < felder.length; i++) {
+      if (suche(felder[i].selektoren || [])) return true;
+    }
+    return Boolean(suche(bildEingabe || []));
+  }
+
   async function fuelleBilder(urls, selektoren) {
     var eingabe = suche(selektoren || ['input[type="file"]']);
     if (!eingabe || !urls || urls.length === 0) return 0;
@@ -181,20 +217,24 @@
         melden(TEXT.abgelaufen, "fehler");
         return;
       }
+      if (antwort.status === 401 || antwort.status === 403) {
+        melden(TEXT.zugriff, "fehler");
+        return;
+      }
       if (!antwort.ok) {
-        melden(TEXT.fehler, "fehler");
+        melden(antwort.status >= 500 ? TEXT.server : TEXT.fehler, "fehler");
         return;
       }
       paket = await antwort.json();
     } catch (e) {
-      melden(TEXT.fehler, "fehler");
+      melden(TEXT.server, "fehler");
       return;
     }
 
     // Auf das Formular warten (Plattformen laden ihre Felder oft nach).
     var versuche = 0;
-    while (versuche < 40) {
-      if (suche((paket.felder[0] && paket.felder[0].selektoren) || [])) break;
+    while (versuche < 60) {
+      if (formularGefunden(paket.felder || [], paket.bildEingabe || [])) break;
       await new Promise(function (r) {
         setTimeout(r, 500);
       });

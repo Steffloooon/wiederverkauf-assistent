@@ -4,6 +4,9 @@
 //  - Android-App (Capacitor): eigenes Verkaufsfenster, Skript wird eingespielt.
 //  - Chrome am Rechner: neuer Tab, die Erweiterung erkennt die Kennung selbst.
 
+/** Öffentliche Adresse, die auch außerhalb der Lovable-Vorschau erreichbar ist. */
+const OEFFENTLICHE_APP_ADRESSE = "https://stefflon.lovable.app";
+
 /** Läuft die App in der Android-Hülle? */
 export function istAndroidApp(): boolean {
   if (typeof window === "undefined") return false;
@@ -18,9 +21,8 @@ export function istErweiterungAktiv(): boolean {
 }
 
 function adresseMitKennung(formularUrl: string, token: string): string {
-  const basis = window.location.origin;
   const trenner = formularUrl.includes("#") ? "&" : "#";
-  return `${formularUrl}${trenner}la-token=${encodeURIComponent(token)}&la-api=${encodeURIComponent(basis)}`;
+  return `${formularUrl}${trenner}la-token=${encodeURIComponent(token)}&la-api=${encodeURIComponent(OEFFENTLICHE_APP_ADRESSE)}`;
 }
 
 export type AssistentErgebnis = { weg: "android" | "chrome" };
@@ -37,7 +39,11 @@ export async function verkaufsformularOeffnen(
 
   if (istAndroidApp()) {
     const { InAppBrowser } = await import("@capgo/inappbrowser");
-    const skript = await fetch("/api/public/assistent/skript").then((r) => r.text());
+    const skriptAntwort = await fetch(`${OEFFENTLICHE_APP_ADRESSE}/api/public/assistent/skript`);
+    if (!skriptAntwort.ok) {
+      throw new Error("Der Ausfüll-Assistent konnte nicht geladen werden.");
+    }
+    const skript = await skriptAntwort.text();
 
     await InAppBrowser.openWebView({
       url: ziel,
@@ -51,7 +57,7 @@ export async function verkaufsformularOeffnen(
     await InAppBrowser.addListener("browserPageLoaded", async () => {
       try {
         await InAppBrowser.executeScript({
-          code: `window.__laUebergabe={token:${JSON.stringify(token)},api:${JSON.stringify(window.location.origin)}};\n${skript}`,
+          code: `window.__laUebergabe={token:${JSON.stringify(token)},api:${JSON.stringify(OEFFENTLICHE_APP_ADRESSE)}};\n${skript}`,
         });
       } catch (fehler) {
         console.error("[Assistent] Einspielen fehlgeschlagen", fehler);

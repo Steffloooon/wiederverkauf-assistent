@@ -58,6 +58,7 @@ jobs:
 
       - name: Android-Projekt erzeugen
         run: |
+          grep -F 'url: "https://stefflon.lovable.app"' capacitor.config.ts
           bunx cap add android || true
           bunx cap sync android
 
