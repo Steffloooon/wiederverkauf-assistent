@@ -1,0 +1,63 @@
+# Baut die Android-App (APK) in der Cloud – kein eigener Rechner nötig.
+name: Android-App bauen
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: APK erzeugen
+    runs-on: ubuntu-latest
+    steps:
+      - name: Projekt holen
+        uses: actions/checkout@v4
+
+      - name: Bun einrichten
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Java einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Android SDK einrichten
+        uses: android-actions/setup-android@v3
+
+      - name: Abhängigkeiten installieren
+        run: bun install
+
+      - name: Web-App bauen
+        run: bun run build
+
+      - name: Android-Projekt erzeugen
+        run: |
+          bunx cap add android || true
+          bunx cap sync android
+
+      - name: APK bauen
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: APK als Download bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiederverkauf-assistent-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Release veröffentlichen (direkter Handy-Download)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-${{ github.run_number }}
+          name: Wiederverkauf-Assistent (Android) ${{ github.run_number }}
+          body: |
+            Fertige Installationsdatei für Android.
+            Auf dem Handy die APK herunterladen, antippen und die Installation aus unbekannten Quellen einmalig erlauben.
+          files: android/app/build/outputs/apk/debug/app-debug.apk

@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Inserate-Assistent",
+  "version": "1.0.0",
+  "default_locale": "de",
+  "description": "Füllt Verkaufsformulare auf eBay, Kleinanzeigen und Vinted mit den Anzeigendaten aus dem Wiederverkauf-Assistenten.",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": [
+    "https://www.ebay.de/*",
+    "https://www.kleinanzeigen.de/*",
+    "https://www.vinted.de/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Inserate-Assistent"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.ebay.de/*",
+        "https://www.kleinanzeigen.de/*",
+        "https://www.vinted.de/*"
+      ],
+      "js": ["fuellen.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
